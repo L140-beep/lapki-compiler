@@ -178,6 +178,8 @@ class Compiler:
                     text=False,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE)
+            case _:
+                raise CompilerException('Not supported compiler')
         await process.wait()
         stdout, stderr = await process.communicate()
 

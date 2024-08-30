@@ -39,7 +39,8 @@ BinaryFile = File
 
 async def create_response(
         base_dir: str,
-        compiler_result: List[CommandResult]) -> CompilerResponse:
+        compiler_result: List[CommandResult],
+        main_file_extension: str) -> CompilerResponse:
     """
     Get source files, binary files from\
         directory and create CompilerResponse.
@@ -73,7 +74,7 @@ async def create_response(
                 )
     response.source.append(await Handler.readSourceFile(
         'sketch',
-        'ino',
+        main_file_extension,
         base_dir)
     )
     response.source.append(await Handler.readSourceFile(
@@ -96,7 +97,10 @@ def get_default_libraries() -> Set[str]:
                )
 
 
-async def compile_xml(xml: str, base_dir_path: str) -> List[CommandResult]:
+async def compile_xml(
+    xml: str,
+    base_dir_path: str) -> tuple[List[CommandResult],
+                                 StateMachine]:
     """
     Compile CGML scheme.
 
@@ -105,7 +109,8 @@ async def compile_xml(xml: str, base_dir_path: str) -> List[CommandResult]:
     Doesn't send anything.
     """
     sm: StateMachine = await parse(xml)
-    await CppFileWriter(sm, True, True).write_to_file(base_dir_path, 'ino')
+    await CppFileWriter(sm, True, True).write_to_file(base_dir_path,
+                                                      sm.main_file_extension)
     settings: SMCompilingSettings | None = sm.compiling_settings
     if settings is None:
         raise Exception('Internal error!')
@@ -118,10 +123,10 @@ async def compile_xml(xml: str, base_dir_path: str) -> List[CommandResult]:
                                         settings.platform_version,
                                         settings.build_files,
                                         base_dir_path)
-    return await Compiler.compile_project(
+    return (await Compiler.compile_project(
         base_dir_path,
         settings.platform_compiler_settings
-    )
+    ), sm)
 
 
 class HandlerException(Exception):
@@ -165,11 +170,13 @@ class Handler:
             base_dir = os.path.join(
                 config.build_directory, base_dir.replace(' ', '_'), 'sketch/')
             await AsyncPath(base_dir).mkdir(parents=True)
-            compiler_result: List[CommandResult] = await compile_xml(
+            compiler_result, sm = await compile_xml(
                 xml,
                 base_dir
             )
-            response = await create_response(base_dir, compiler_result)
+            response = await create_response(base_dir, compiler_result,
+                                             sm.main_file_extension
+                                             )
             await Logger.logger.info(response)
             await ws.send_json(response.model_dump())
         except CGMLException as e:
