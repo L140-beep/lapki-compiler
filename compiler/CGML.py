@@ -595,6 +595,7 @@ def __generate_main_function() -> ParserNote:
 \n\twhile(1) {\
 \n\t\tloop();
 \n\t}
+\n\treturn 0;
 }
 """)
 

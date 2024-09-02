@@ -58,8 +58,9 @@ async def create_response(
         binary=[],
         source=[]
     )
+
     build_path = os.path.join(base_dir, 'build/')
-    await AsyncPath(build_path).mkdir(exist_ok=True)
+
     async for path in AsyncPath(build_path).rglob('*'):
         if await path.is_file():
             async with async_open(path, 'rb') as f:
@@ -112,6 +113,8 @@ async def compile_xml(
     await CppFileWriter(sm, True, True).write_to_file(base_dir_path,
                                                       sm.main_file_extension)
     settings: SMCompilingSettings | None = sm.compiling_settings
+    build_path = os.path.join(base_dir_path, 'build/')
+    await AsyncPath(build_path).mkdir(exist_ok=True)
     if settings is None:
         raise Exception('Internal error!')
     default_library = get_default_libraries()
@@ -174,7 +177,8 @@ class Handler:
                 xml,
                 base_dir
             )
-            response = await create_response(base_dir, compiler_result,
+            response = await create_response(base_dir,
+                                             compiler_result,
                                              sm.main_file_extension
                                              )
             await Logger.logger.info(response)
