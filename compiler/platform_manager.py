@@ -300,12 +300,12 @@ class PlatformManager:
         """Get platform object by id."""
         full_platform_name = get_full_platform_name(platform_id, version)
         platform: Platform | None = self.__platforms.get(full_platform_name)
-
+        meta: PlatformMeta | None = self.__versions_info.get(platform_id)
         if platform is not None:
             return platform
 
-        if (version not in
-                self.__versions_info[platform_id].versions):
+        if (meta is None or version not in
+                meta.versions):
             raise PlatformException(
                 f'Unsupported platform {platform_id}, version {version}')
 

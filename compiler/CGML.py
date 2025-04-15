@@ -5,7 +5,7 @@ from typing import Dict, List, Set, Any
 from copy import deepcopy
 from string import Template
 
-from compiler.platform_manager import PlatformManager
+from compiler.platform_manager import PlatformException, PlatformManager
 from compiler.types.ide_types import Bounds
 from compiler.types.inner_types import (
     InnerComponent,
@@ -910,7 +910,7 @@ async def parse(xml: str) -> tuple[Dict[StateMachineId, ERROR],
                 header_file_extension=platform.header_file_extension,
                 shallow_history=shallow_history
             )
-        except _InnerCGMLException as e:
+        except (_InnerCGMLException, PlatformException) as e:
             errors[sm_id] = (
                 'Во время парсинга схемы '
                 'произошла ошибка: ' +

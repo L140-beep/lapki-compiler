@@ -99,7 +99,8 @@
         }
       },
       "constructorParameters": {
-        "Где": {
+        "pin": {
+          "name": "Где",
           "type": ["1", "2", "3", "4", "5", "6"],
           "valueAlias": [
             "Правая лапа",
