@@ -40,6 +40,7 @@ class ClassParameter:
     description: str
     optional: bool = False
     valueAlias: Optional[List[str]] = None
+    alias: Optional[None] = None
 
 
 @dataclass
