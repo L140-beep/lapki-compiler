@@ -467,7 +467,12 @@ class CppFileWriter:
             await self._insert_file_template(f'footer_{self.header_file_extension}.txt')
             self.f = None
 
-        async with async_open(f'compiler_defines.{self.header_file_extension}', 'w') as f:
+        async with async_open(
+            os.path.join(
+                folder,
+                f'compiler_defines.{self.header_file_extension}'
+            ),
+                'w') as f:
             self.f = f
             await self._insert_string('\n'.join(self.notes_dict['defines'].split('\n')[1:]) + '\n')
 
