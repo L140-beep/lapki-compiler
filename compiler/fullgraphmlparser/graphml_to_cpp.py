@@ -1,5 +1,4 @@
 import os.path
-import inspect
 import re
 import string
 from collections import defaultdict
@@ -105,7 +104,8 @@ class CppFileWriter:
             (Labels.USER_FUNC_C.value, 'user_methods_c'),
             (Labels.SETUP.value, 'setup'),
             (Labels.LOOP.value, 'loop'),
-            (Labels.MAIN_FUNCTION.value, 'main_function')
+            (Labels.MAIN_FUNCTION.value, 'main_function'),
+            (Labels.DEFINES.value, 'defines')
         ]
 
         self.list_notes_dict: Dict[str, List[str]] = {key: [''] for _, key
@@ -466,6 +466,10 @@ class CppFileWriter:
                 await self._insert_string('//End of h code from diagram\n\n\n')
             await self._insert_file_template(f'footer_{self.header_file_extension}.txt')
             self.f = None
+
+        async with async_open(f'compiler_defines.{self.header_file_extension}', 'w') as f:
+            self.f = f
+            await self._insert_string('\n'.join(self.notes_dict['defines'].split('\n')[1:]) + '\n')
 
     async def _write_constructor(self):
         await self._insert_string('void STATE_MACHINE_CAPITALIZED_NAME_ctor(')

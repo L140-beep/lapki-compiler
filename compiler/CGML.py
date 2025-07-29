@@ -528,6 +528,31 @@ def __generate_default_setup_function(
     ]
 
 
+def __generate_components_defines(
+    components_types: Set[str]
+) -> Set[str]:
+    """
+    Generate defines from components types.
+
+    Example: USE_LED, USE_BUTTON
+    """
+    return set(f'USE_{component_type}' for component_type in components_types)
+
+
+def __generate_defines_code(
+    defines: List[str]
+) -> List[ParserNote]:
+    """Create defines notes from defines list.
+
+    Add `#define` to each define.
+    """
+    return [
+        create_note(
+            Labels.DEFINES, f'#define {define}'
+        ) for define in defines
+    ]
+
+
 def __generate_setup_function_code(
         components: Dict[_ComponentId, InnerComponent],
         platform: Platform) -> List[ParserNote]:
@@ -575,6 +600,11 @@ def __get_include_libraries(platform: Platform,
         included_libraries.extend(
             platform.components[component.type].importFiles)
     return included_libraries
+
+
+def __get_components_types(components: List[InnerComponent]) -> Set[str]:
+    """Get set of used components types."""
+    return set([component.type for component in components])
 
 
 def __generate_includes_libraries_code(
@@ -871,6 +901,11 @@ async def parse(xml: str) -> tuple[Dict[StateMachineId, ERROR],
                 platform, list(parsed_components.values()))
             build_files = __get_build_files(
                 platform, list(parsed_components.values()))
+            components_types = __get_components_types(
+                list(parsed_components.values())
+            )
+            components_defines = __generate_components_defines(
+                components_types)
             notes: List[ParserNote] = [
                 *__generate_create_components_code(parsed_components,
                                                    platform),
@@ -880,7 +915,8 @@ async def parse(xml: str) -> tuple[Dict[StateMachineId, ERROR],
                                                     parsed_components),
                 *__generate_loop_signal_checks_code(platform,
                                                     all_triggers,
-                                                    parsed_components)
+                                                    parsed_components),
+                * __generate_defines_code(list(components_defines))
             ]
 
             if platform.main_function:

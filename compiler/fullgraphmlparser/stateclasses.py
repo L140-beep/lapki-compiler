@@ -51,6 +51,7 @@ class Labels(Enum):
     STATE_FIELDS = 'State fields'
     EVENT_FIELDS = 'Event fields'
     MAIN_FUNCTION = 'Main function'
+    DEFINES = 'Defines'
 
 
 @runtime_checkable
