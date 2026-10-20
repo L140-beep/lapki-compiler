@@ -173,7 +173,7 @@
         }
       },
       "buildFiles": [
-        "LapkiLed.h"
+        "Lapki/LapkiLed.h"
       ],
       "importFiles": [
         "LapkiLed.h"
@@ -227,7 +227,7 @@
         }
       },
       "buildFiles": [
-        "LapkiLed.h"
+        "Lapki/LapkiLed.h"
       ],
       "importFiles": [
         "LapkiLed.h"
@@ -280,7 +280,7 @@
         }
       },
       "buildFiles": [
-        "Timer.h"
+        "Lapki/Timer.h"
       ],
       "importFiles": [
         "Timer.h"
@@ -380,7 +380,7 @@
         }
       },
       "buildFiles": [
-        "Counter.h"
+        "Lapki/Counter.h"
       ],
       "importFiles": [
         "Counter.h"
@@ -440,7 +440,7 @@
         }
       },
       "buildFiles": [
-        "Serial.h"
+        "Lapki/Serial.h"
       ],
       "importFiles": [
         "Serial.h"
@@ -478,7 +478,7 @@
       },
       "variables": {},
       "buildFiles": [
-        "Button.h"
+        "Lapki/Button.h"
       ],
       "importFiles": [
         "Button.h"
@@ -514,7 +514,7 @@
         }
       },
       "buildFiles": [
-        "IRpkg.h"
+        "Lapki/IRpkg.h"
       ],
       "importFiles": [
         "IRpkg.h"
@@ -579,7 +579,7 @@
       },
       "loopActions": [],
       "buildFiles": [
-        "IRReciever.h"
+        "Lapki/IRReciever.h"
       ],
       "importFiles": [
         "IRReciever.h"
@@ -621,7 +621,7 @@
       },
       "loopActions": [],
       "buildFiles": [
-        "IRTransmitter.h"
+        "Lapki/IRTransmitter.h"
       ],
       "importFiles": [
         "IRTransmitter.h"
@@ -711,7 +711,7 @@
       },
       "loopActions": [],
       "buildFiles": [
-        "LedStrip.h"
+        "Lapki/LedStrip.h"
       ],
       "importFiles": [
         "LedStrip.h"
@@ -788,7 +788,7 @@
       },
       "loopActions": [],
       "buildFiles": [
-        "Pwm_Control.h"
+        "Lapki/Pwm_Control.h"
       ],
       "importFiles": [
         "Pwm_Control.h"
@@ -829,7 +829,7 @@
       },
       "loopActions": [],
       "buildFiles": [
-        "Buzzer.h"
+        "Lapki/Buzzer.h"
       ],
       "importFiles": [
         "Buzzer.h"

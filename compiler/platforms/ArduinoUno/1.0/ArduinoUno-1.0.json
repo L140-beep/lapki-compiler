@@ -433,6 +433,7 @@
       },
       "buildFiles": ["Timer.h", "Timer.ino"],
       "importFiles": ["Timer.h"],
+      "loopActions": ["updateDifference"],
       "singletone": false,
       "variables": {
         "difference": {
@@ -611,6 +612,7 @@
           "description": "Текущее значение на пине."
         }
       },
+      "initializationFunction": "init",
       "buildFiles": ["DigitalOut.h", "DigitalOut.ino"],
       "importFiles": ["DigitalOut.h"],
       "singletone": false
@@ -623,17 +625,17 @@
         "isChanged": {
           "img": "arduino/toggle.svg",
           "description": "Сигнал вызывается, когда меняется значение на пине.",
-          "checkMethod": "isChanged"
+          "checkMethod": "changed"
         },
         "isLow": {
           "img": "arduino/isLow.svg",
           "description": "Сигнал вызывается, когда значение на пине меняется на LOW",
-          "checkMethod": "isLow"
+          "checkMethod": "highToLow"
         },
         "isHigh": {
           "img": "arduino/isHigh.svg",
           "description": "Сигнал вызывается, когда значение на пине меняется на HIGH",
-          "checkMethod": "isHigh"
+          "checkMethod": "lowToHigh"
         }
       },
       "constructorParameters": {
@@ -650,6 +652,7 @@
           "description": "Текущее значение на пине."
         }
       },
+      "loopActions": ["update"],
       "buildFiles": ["DigitalIn.h", "DigitalIn.ino"],
       "importFiles": ["DigitalIn.h"],
       "singletone": false

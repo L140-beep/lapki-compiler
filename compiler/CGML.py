@@ -29,7 +29,8 @@ from cyberiadaml_py.types.elements import (
     CGMLInitialState,
     CGMLChoice,
     CGMLFinal,
-    CGMLShallowHistory
+    CGMLShallowHistory,
+    CGMLDeepHistory
 )
 from compiler.fullgraphmlparser.stateclasses import (
     StateMachine,
@@ -44,7 +45,8 @@ from compiler.fullgraphmlparser.stateclasses import (
     GeneratorInitialVertex,
     UnconditionalTransition,
     GeneratorFinalVertex,
-    GeneratorShallowHistory
+    GeneratorHistory,
+    GLOBAL_STATE
 )
 _StartNodeId = str
 _TransitionId = str
@@ -150,9 +152,11 @@ def __gen_id() -> int:
     return random.randint(0, 100)
 
 
-def __process_state(state_id: str,
-                    cgml_state: CGMLState,
-                    default_propagate: bool = False) -> ParserState:
+def __process_state(
+        state_id: str,
+        cgml_state: CGMLState,
+        default_propagate: bool = False
+) -> ParserState:
     """Process internal triggers and actions of state."""
     inner_triggers: List[InnerEvent] = __parse_actions(cgml_state.actions)
     parser_triggers: List[ParserTrigger] = []
@@ -204,11 +208,11 @@ def __process_state(state_id: str,
         type='internal',
         entry=entry,
         exit=exit,
-        parent=None,
+        parent=cgml_state.parent,
         bounds=None,
         actions='',
         trigs=parser_triggers,
-        childs=[]
+        children=[]
     )
 
 
@@ -271,31 +275,31 @@ def __connect_transitions_to_states(
 def __connect_parents_to_states(
     parser_states: Dict[_StateId, ParserState],
     cgml_states: Dict[_StateId, CGMLState],
-    global_state: ParserState
-) -> Dict[_StateId, ParserState]:
+    global_state: ParserState,
+) -> tuple[Dict[_StateId, ParserState], ParserState]:
     """
-    Fill parent field for states.
+    Fill parent field for states and update global_state.children.
 
     We can't fill it during first iteration,\
         because not everyone state is ready.
     So we can't add parent, that doesn't exist yet.
+    Returns: (updated states dict, updated global_state with filled children)
     """
+    global_copy = deepcopy(global_state)
     states_with_parents = deepcopy(parser_states)
-
     for state_id in cgml_states:
         cgml_state = cgml_states[state_id]
         parser_state = states_with_parents[state_id]
         parent = cgml_state.parent
         if parent is None:
-            parser_state.parent = global_state
-            global_state.childs.append(parser_state)
+            parser_state.parent = global_copy.id
+            global_copy.children.append(parser_state)
         else:
             parent_state = states_with_parents[parent]
-            parser_state.parent = parent_state
-            parent_state.childs.append(parser_state)
+            parser_state.parent = parent
+            parent_state.children.append(parser_state)
             parent_state.type = 'group'
-
-    return states_with_parents
+    return states_with_parents, global_copy
 
 
 def __get_all_triggers(states: List[ParserState],
@@ -621,7 +625,8 @@ def __init_initial_states(
             initial.parent,
             UnconditionalTransition(
                 '',
-                '')
+                ''
+            )
         )
     if start_node_id is None:
         raise _InnerCGMLException('Отсутствует начальное состояние.')
@@ -654,9 +659,9 @@ def _add_initials_to_states(
 ) -> Dict[str, ParserState]:
     new_states = deepcopy(states)
     for initial in initials.values():
-        if initial.parent is None:
+        if initial.parent == GLOBAL_STATE:
             continue
-        state = states[initial.parent]
+        state = new_states[initial.parent]
         state.initial_state = initial.id
         state.type = 'group'
 
@@ -719,32 +724,34 @@ def __create_choices(
     return parser_choices, new_transitions
 
 
-def __create_shallow_history(
-    shallow_histories: Dict[_VertexId, CGMLShallowHistory],
+def __create_history(
+    histories:
+    Dict[_VertexId, CGMLShallowHistory] |
+    Dict[_VertexId, CGMLDeepHistory],
     transitions: List[ParserTrigger]
-) -> tuple[List[GeneratorShallowHistory],
+) -> tuple[List[GeneratorHistory],
            List[ParserTrigger]]:
     """
-    Подготовка элементов локальной истории к генерации кода.
+    Подготовка элементов локальной/глубокой истории к генерации кода.
 
     Возвращает данные для генерации и триггеры без переходов
     из локальных состояний.
     """
-    generator_shallow_histories: Dict[str, GeneratorShallowHistory] = {}
+    generator_histories: Dict[str, GeneratorHistory] = {}
     new_transitions: List[ParserTrigger] = []
 
-    for i, sh in enumerate(shallow_histories.items()):
-        id, val = sh
-        generator_shallow_histories[id] = (
-            GeneratorShallowHistory(id, val.parent, index=i)
+    for i, h in enumerate(histories.items()):
+        id, val = h
+        generator_histories[id] = (
+            GeneratorHistory(id, val.parent, index=i)
         )
     for transition in transitions:
-        sh = generator_shallow_histories.get(transition.source)
-        if sh is None:
+        h = generator_histories.get(transition.source)
+        if h is None:
             new_transitions.append(transition)
             continue
-        sh.default_value = transition.target
-    return list(generator_shallow_histories.values()), new_transitions
+        h.default_value = transition.target
+    return list(generator_histories.values()), new_transitions
 
 
 def __create_final_states(
@@ -755,6 +762,35 @@ def __create_final_states(
         # Родитель в дальнейшем не используется
         finals.append(GeneratorFinalVertex(final_id, cgml_final.parent))
     return finals
+
+
+def __update_global_state(
+    global_state: ParserState,
+    states: Dict[str, ParserState]
+) -> ParserState:
+    """
+    Рекурсивно обновить все состояния в глобальном состоянии до актуальных.
+
+    Так как все функции для работы с состояниями чистые, то
+    у нас проблема, что список состояний актуальный, но дочерние элементы
+    в global_state остаются старыми.
+    """
+    def __recursive_update(
+        parent: ParserState,
+        states: Dict[str, ParserState]
+    ):
+        for i, child in enumerate(parent.children):
+            state = states.get(child.id)
+            if state is None:
+                raise _InnerCGMLException(
+                    'Отсутствует дочернее состояние в списке состояний')
+            parent.children[i] = state
+            __recursive_update(state, states)
+        return parent
+    copy_states = deepcopy(states)
+    updated_global_state = deepcopy(global_state)
+    __recursive_update(updated_global_state, copy_states)
+    return updated_global_state
 
 
 def check_sm_id(sm_id: str) -> bool:
@@ -806,16 +842,16 @@ async def parse(xml: str) -> tuple[Dict[StateMachineId, ERROR],
                     ' должен содержать только латинские буквы.'
                     'цифры и _.')
             global_state = ParserState(
-                name='global',
+                name=GLOBAL_STATE,
                 type='group',
                 actions='',
                 trigs=[],
                 entry='',
                 exit='',
-                id='global',
-                new_id=['global'],
+                id=GLOBAL_STATE,
+                new_id=[GLOBAL_STATE],
                 parent=None,
-                childs=[],
+                children=[],
                 bounds=Bounds(
                     x=0,
                     y=0,
@@ -838,12 +874,13 @@ async def parse(xml: str) -> tuple[Dict[StateMachineId, ERROR],
             for state_id in cgml_states:
                 cgml_state = cgml_states[state_id]
                 states[state_id] = __process_state(state_id, cgml_state)
-            states_with_transitions = __connect_transitions_to_states(
+            states = __connect_transitions_to_states(
                 states,
                 transitions
             )
-            states_with_parents = __connect_parents_to_states(
-                states_with_transitions, cgml_states, global_state)
+            states, global_state = __connect_parents_to_states(
+                states, cgml_states, global_state
+            )
             if state_machine.initial_states is None:
                 raise _InnerCGMLException('Отсутствует начальное состояние!')
 
@@ -851,24 +888,33 @@ async def parse(xml: str) -> tuple[Dict[StateMachineId, ERROR],
             # 1) Сформировать набор всех сигналов
             # 2) Сгенерировать проверки для вызова сигналов
             start_node, initials = __init_initial_states(
-                state_machine.initial_states)
+                state_machine.initial_states
+            )
             initial_with_transition, transitions_without_initials = (
                 _add_transition_to_initials(initials, transitions)
+            )
+            states = _add_initials_to_states(
+                initial_with_transition, states,
             )
             choices, transitions_without_choices = __create_choices(
                 state_machine.choices, transitions_without_initials)
             shallow_history, transitions_without_shallow_history = (
-                __create_shallow_history(
-                    state_machine.shallow_history, transitions_without_choices
+                __create_history(
+                    state_machine.shallow_history,
+                    transitions_without_choices
+                )
+            )
+            deep_history, transitions_without_deep_history = (
+                __create_history(
+                    state_machine.deep_history,
+                    transitions_without_shallow_history
                 )
             )
             final_states = __create_final_states(state_machine.finals)
             all_triggers = __get_all_triggers(
-                list(states_with_parents.values()),
-                transitions_without_shallow_history)
+                list(states.values()),
+                transitions_without_deep_history)
             signals = __get_signals_set(all_triggers)
-            states_with_initials = _add_initials_to_states(
-                initial_with_transition, states_with_parents)
             parsed_components = __parse_components(state_machine.components)
             included_libraries: List[str] = __get_include_libraries(
                 platform, list(parsed_components.values()))
@@ -896,6 +942,7 @@ async def parse(xml: str) -> tuple[Dict[StateMachineId, ERROR],
                 platform_version,
                 platform.compiling_settings
             )
+            global_state = __update_global_state(global_state, states)
             state_machines[sm_id] = StateMachine(
                 start_node=start_node,
                 id=sm_id,
@@ -903,7 +950,8 @@ async def parse(xml: str) -> tuple[Dict[StateMachineId, ERROR],
                 start_action='',
                 notes=notes,
                 main_file_extension=platform.main_file_extension,
-                states=[global_state, *list(states_with_initials.values())],
+                global_state=global_state,
+                states=list(states.values()),
                 signals=signals,
                 compiling_settings=compiling_settings,
                 initial_states=[*initial_with_transition.values()],
@@ -911,7 +959,8 @@ async def parse(xml: str) -> tuple[Dict[StateMachineId, ERROR],
                 final_states=final_states,
                 language=platform.language,
                 header_file_extension=platform.header_file_extension,
-                shallow_history=shallow_history
+                shallow_history=shallow_history,
+                deep_history=deep_history
             )
         except _InnerCGMLException as e:
             errors[sm_id] = (

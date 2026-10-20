@@ -1,4 +1,4 @@
-{ lib, gnumake, gcc-arm-embedded,  python3Packages, arduino-cli, cargo, maturin, rustc, rustPlatform, fetchFromGitHub }:
+{ lib, gnumake, gcc-arm-embedded,  python3Packages, arduino-cli, cargo, maturin, rustc, rustPlatform, fetchFromGitHub, bash, coreutils }:
 with python3Packages;
 
 let
@@ -212,6 +212,8 @@ buildPythonApplication {
     typed-argument-parser
     flake8
     cyberiadaml-py
+    bash
+    coreutils
   ];
 
   doCheck = false;
